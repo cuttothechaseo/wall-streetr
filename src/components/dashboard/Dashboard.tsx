@@ -1,3 +1,6 @@
+import { GmailConnection } from "@/components/gmail/GmailConnection";
+import { WebhookStatusCheck } from "@/components/gmail/WebhookStatusCheck";
+
 export function Dashboard() {
   return (
     <div className="space-y-6">
@@ -6,6 +9,37 @@ export function Dashboard() {
         <p className="text-muted-foreground">
           Welcome to your networking command center.
         </p>
+      </div>
+
+      {/* Gmail Connection Section */}
+      <div className="rounded-lg border p-4">
+        <h3 className="text-lg font-semibold mb-4">Email Integration</h3>
+        <div className="flex justify-center">
+          <GmailConnection
+            onConnected={() => {
+              console.log(
+                "Gmail connected successfully! Webhook is automatically configured."
+              );
+            }}
+          />
+        </div>
+        <div className="mt-4 text-sm text-muted-foreground text-center">
+          <p>
+            ✅ Gmail webhook automatically configured for real-time email
+            updates
+          </p>
+          <p>
+            ✅ Contact stages update automatically when emails are sent/received
+          </p>
+        </div>
+      </div>
+
+      {/* Webhook Status Check (Debug) */}
+      <div className="rounded-lg border p-4">
+        <h3 className="text-lg font-semibold mb-4">Webhook Status Check</h3>
+        <div className="flex justify-center">
+          <WebhookStatusCheck />
+        </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">

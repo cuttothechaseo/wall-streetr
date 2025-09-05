@@ -2,3 +2,5 @@ node_modules
 
 # Hide context file from public repo
 context.md
+GMAIL_WEBHOOK_SETUP.md
+README.md

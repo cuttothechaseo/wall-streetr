@@ -40,6 +40,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { EmailCompositionModal } from "@/components/email/EmailCompositionModal";
 import { createClient } from "@/utils/supabase/client";
 
 // Define the contact type based on database schema
@@ -52,7 +53,12 @@ type Contact = {
   phone?: string;
   company?: string;
   title?: string;
-  stage: "intro_sent" | "in_conversation" | "call_scheduled" | "followed_up";
+  stage:
+    | "not_contacted"
+    | "intro_sent"
+    | "in_conversation"
+    | "call_scheduled"
+    | "followed_up";
   follow_up_date?: string; // ISO date string
   tags: ("Alumni" | "IB" | "PE" | "Other")[];
   last_activity: string;
@@ -63,6 +69,8 @@ type Contact = {
 
 const getStageColor = (stage: Contact["stage"]) => {
   switch (stage) {
+    case "not_contacted":
+      return "bg-red-100 text-red-800";
     case "intro_sent":
       return "bg-blue-100 text-blue-800";
     case "in_conversation":
@@ -78,6 +86,8 @@ const getStageColor = (stage: Contact["stage"]) => {
 
 const formatStage = (stage: Contact["stage"]) => {
   switch (stage) {
+    case "not_contacted":
+      return "Not Contacted";
     case "intro_sent":
       return "Intro Sent";
     case "in_conversation":
@@ -91,6 +101,49 @@ const formatStage = (stage: Contact["stage"]) => {
   }
 };
 
+const formatRelativeTime = (dateString: string): string => {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffInMs = now.getTime() - date.getTime();
+  const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
+  const diffInWeeks = Math.floor(diffInDays / 7);
+  const diffInMonths = Math.floor(diffInDays / 30);
+  const diffInYears = Math.floor(diffInDays / 365);
+
+  if (diffInDays === 0) {
+    return "Today";
+  } else if (diffInDays === 1) {
+    return "Yesterday";
+  } else if (diffInDays < 7) {
+    return `${diffInDays} days ago`;
+  } else if (diffInWeeks === 1) {
+    return "1 week ago";
+  } else if (diffInWeeks < 4) {
+    return `${diffInWeeks} weeks ago`;
+  } else if (diffInMonths === 1) {
+    return "1 month ago";
+  } else if (diffInMonths < 12) {
+    return `${diffInMonths} months ago`;
+  } else if (diffInYears === 1) {
+    return "1 year ago";
+  } else {
+    return `${diffInYears} years ago`;
+  }
+};
+
+const formatPhoneNumber = (phone: string): string => {
+  // Remove all non-digit characters
+  const digits = phone.replace(/\D/g, "");
+
+  // Check if it's a valid 10-digit US phone number
+  if (digits.length === 10) {
+    return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
+  }
+
+  // If it's already formatted or doesn't match expected format, return as-is
+  return phone;
+};
+
 export function Contacts() {
   const { user, isLoaded } = useUser();
   const [contacts, setContacts] = useState<Contact[]>([]);
@@ -98,6 +151,9 @@ export function Contacts() {
   const [error, setError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [editingContact, setEditingContact] = useState<Contact | null>(null);
+  const [emailModalOpen, setEmailModalOpen] = useState(false);
+  const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -107,7 +163,7 @@ export function Contacts() {
     phone: "",
     company: "",
     title: "",
-    stage: "intro_sent" as Contact["stage"],
+    stage: "not_contacted" as Contact["stage"],
     tags: [] as string[],
     notes: "",
   });
@@ -159,43 +215,86 @@ export function Contacts() {
     try {
       const supabase = createClient();
 
-      const { data, error } = await supabase
-        .from("contacts")
-        .insert([
-          {
+      if (editingContact) {
+        // Update existing contact
+        const { data, error } = await supabase
+          .from("contacts")
+          .update({
             ...formData,
-            user_id: user.id, // Use real Clerk user ID
             tags: formData.tags,
-          },
-        ])
-        .select()
-        .single();
+          })
+          .eq("id", editingContact.id)
+          .select()
+          .single();
 
-      if (error) {
-        console.error("Error creating contact:", error);
-        console.error("Error details:", JSON.stringify(error, null, 2));
-        setError(
-          `Error creating contact: ${
-            error.message || error.details || "Unknown error"
-          }`
-        );
+        if (error) {
+          console.error("Error updating contact:", error);
+          setError(
+            `Error updating contact: ${error.message || "Unknown error"}`
+          );
+        } else {
+          // Update the contact in the list
+          setContacts(
+            contacts.map((contact) =>
+              contact.id === editingContact.id ? data : contact
+            )
+          );
+
+          // Reset form and close modal
+          setFormData({
+            first_name: "",
+            last_name: "",
+            email: "",
+            phone: "",
+            company: "",
+            title: "",
+            stage: "not_contacted",
+            tags: [],
+            notes: "",
+          });
+          setEditingContact(null);
+          setIsModalOpen(false);
+        }
       } else {
-        // Add the new contact to the list
-        setContacts([data, ...contacts]);
+        // Create new contact
+        const { data, error } = await supabase
+          .from("contacts")
+          .insert([
+            {
+              ...formData,
+              user_id: user.id, // Use real Clerk user ID
+              tags: formData.tags,
+            },
+          ])
+          .select()
+          .single();
 
-        // Reset form and close modal
-        setFormData({
-          first_name: "",
-          last_name: "",
-          email: "",
-          phone: "",
-          company: "",
-          title: "",
-          stage: "intro_sent",
-          tags: [],
-          notes: "",
-        });
-        setIsModalOpen(false);
+        if (error) {
+          console.error("Error creating contact:", error);
+          console.error("Error details:", JSON.stringify(error, null, 2));
+          setError(
+            `Error creating contact: ${
+              error.message || error.details || "Unknown error"
+            }`
+          );
+        } else {
+          // Add the new contact to the list
+          setContacts([data, ...contacts]);
+
+          // Reset form and close modal
+          setFormData({
+            first_name: "",
+            last_name: "",
+            email: "",
+            phone: "",
+            company: "",
+            title: "",
+            stage: "not_contacted",
+            tags: [],
+            notes: "",
+          });
+          setIsModalOpen(false);
+        }
       }
     } catch (err) {
       console.error("Error creating contact:", err);
@@ -208,6 +307,90 @@ export function Contacts() {
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
+
+  const handleEditContact = (contact: Contact) => {
+    setEditingContact(contact);
+    setFormData({
+      first_name: contact.first_name,
+      last_name: contact.last_name,
+      email: contact.email || "",
+      phone: contact.phone || "",
+      company: contact.company || "",
+      title: contact.title || "",
+      stage: contact.stage,
+      tags: contact.tags || [],
+      notes: contact.notes || "",
+    });
+    setIsModalOpen(true);
+  };
+
+  const handleCopyEmail = async (email: string) => {
+    try {
+      await navigator.clipboard.writeText(email);
+      // You could add a toast notification here
+    } catch (err) {
+      console.error("Failed to copy email:", err);
+    }
+  };
+
+  const handleSendEmail = (contact: Contact) => {
+    if (!contact.email) {
+      setError("Contact has no email address");
+      return;
+    }
+
+    if (!user) {
+      setError("Please sign in to send emails");
+      return;
+    }
+
+    setSelectedContact(contact);
+    setEmailModalOpen(true);
+  };
+
+  const handleEmailSent = async () => {
+    // Refresh contacts to show updated stage
+    console.log("Email sent successfully!");
+
+    if (!user) return;
+
+    try {
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from("contacts")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        console.error("Error refreshing contacts:", error);
+      } else {
+        setContacts(data || []);
+      }
+    } catch (err) {
+      console.error("Error refreshing contacts:", err);
+    }
+
+    // You could add a toast notification here
+  };
+
+  // Reset form when modal closes
+  useEffect(() => {
+    if (!isModalOpen) {
+      setEditingContact(null);
+      setFormData({
+        first_name: "",
+        last_name: "",
+        email: "",
+        phone: "",
+        company: "",
+        title: "",
+        stage: "not_contacted" as Contact["stage"],
+        tags: [],
+        notes: "",
+      });
+    }
+  }, [isModalOpen]);
 
   if (!isLoaded) {
     return (
@@ -291,9 +474,13 @@ export function Contacts() {
           </DialogTrigger>
           <DialogContent className="sm:max-w-[425px]">
             <DialogHeader>
-              <DialogTitle>Add New Contact</DialogTitle>
+              <DialogTitle>
+                {editingContact ? "Update Contact" : "Add New Contact"}
+              </DialogTitle>
               <DialogDescription>
-                Add a new contact to your networking database.
+                {editingContact
+                  ? "Update the contact information below."
+                  : "Add a new contact to your networking database."}
               </DialogDescription>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -364,6 +551,7 @@ export function Contacts() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="not_contacted">Not Contacted</SelectItem>
                     <SelectItem value="intro_sent">Intro Sent</SelectItem>
                     <SelectItem value="in_conversation">
                       In Conversation
@@ -374,6 +562,36 @@ export function Contacts() {
                     <SelectItem value="followed_up">Followed Up</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="tags">Tags</Label>
+                <div className="space-y-2">
+                  <div className="flex flex-wrap gap-2">
+                    {["Alumni", "IB", "PE", "Other"].map((tag) => (
+                      <Button
+                        key={tag}
+                        type="button"
+                        variant={
+                          formData.tags.includes(tag) ? "default" : "outline"
+                        }
+                        size="sm"
+                        onClick={() => {
+                          setFormData((prev) => ({
+                            ...prev,
+                            tags: prev.tags.includes(tag)
+                              ? prev.tags.filter((t) => t !== tag)
+                              : [...prev.tags, tag],
+                          }));
+                        }}
+                      >
+                        {tag}
+                      </Button>
+                    ))}
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Select relevant tags for this contact
+                  </p>
+                </div>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="notes">Notes</Label>
@@ -393,7 +611,13 @@ export function Contacts() {
                   Cancel
                 </Button>
                 <Button type="submit" disabled={isSubmitting}>
-                  {isSubmitting ? "Adding..." : "Add Contact"}
+                  {isSubmitting
+                    ? editingContact
+                      ? "Updating..."
+                      : "Adding..."
+                    : editingContact
+                    ? "Update Contact"
+                    : "Add Contact"}
                 </Button>
               </DialogFooter>
             </form>
@@ -424,7 +648,9 @@ export function Contacts() {
                   </TableCell>
                   <TableCell>{contact.company}</TableCell>
                   <TableCell className="text-sm">{contact.title}</TableCell>
-                  <TableCell className="text-sm">{contact.phone}</TableCell>
+                  <TableCell className="text-sm">
+                    {contact.phone ? formatPhoneNumber(contact.phone) : ""}
+                  </TableCell>
                   <TableCell>
                     <span
                       className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStageColor(
@@ -435,7 +661,7 @@ export function Contacts() {
                     </span>
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
-                    {contact.last_activity}
+                    {formatRelativeTime(contact.last_activity)}
                   </TableCell>
                   <TableCell>
                     <div className="flex gap-1 flex-wrap">
@@ -467,18 +693,22 @@ export function Contacts() {
                       <DropdownMenuContent align="end">
                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
                         <DropdownMenuItem
-                          onClick={() =>
-                            contact.email &&
-                            navigator.clipboard.writeText(contact.email)
-                          }
+                          onClick={() => handleEditContact(contact)}
+                        >
+                          Update Contact
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => handleCopyEmail(contact.email || "")}
                           disabled={!contact.email}
                         >
                           Copy email
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem>View profile</DropdownMenuItem>
-                        <DropdownMenuItem>Send email</DropdownMenuItem>
-                        <DropdownMenuItem>Add note</DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => handleSendEmail(contact)}
+                        >
+                          Send Email
+                        </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
@@ -493,6 +723,19 @@ export function Contacts() {
             No contacts found. Add your first contact to get started!
           </p>
         </div>
+      )}
+
+      {/* Email Composition Modal */}
+      {selectedContact && (
+        <EmailCompositionModal
+          contact={selectedContact}
+          isOpen={emailModalOpen}
+          onClose={() => {
+            setEmailModalOpen(false);
+            setSelectedContact(null);
+          }}
+          onEmailSent={handleEmailSent}
+        />
       )}
     </div>
   );
