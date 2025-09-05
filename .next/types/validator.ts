@@ -83,6 +83,12 @@ type RouteHandlerConfig<Route extends AppRouteHandlerRoutes = AppRouteHandlerRou
   handler satisfies RouteHandlerConfig<"/api/email/send">
 }
 
+// Validate ../../src/app/api/gmail-webhook/route.ts
+{
+  const handler = {} as typeof import("../../src/app/api/gmail-webhook/route.js")
+  handler satisfies RouteHandlerConfig<"/api/gmail-webhook">
+}
+
 // Validate ../../src/app/api/gmail/check-connection/route.ts
 {
   const handler = {} as typeof import("../../src/app/api/gmail/check-connection/route.js")
@@ -111,6 +117,18 @@ type RouteHandlerConfig<Route extends AppRouteHandlerRoutes = AppRouteHandlerRou
 {
   const handler = {} as typeof import("../../src/app/api/gmail/webhook-status/route.js")
   handler satisfies RouteHandlerConfig<"/api/gmail/webhook-status">
+}
+
+// Validate ../../src/app/api/simple-test/route.ts
+{
+  const handler = {} as typeof import("../../src/app/api/simple-test/route.js")
+  handler satisfies RouteHandlerConfig<"/api/simple-test">
+}
+
+// Validate ../../src/app/api/test-webhook/route.ts
+{
+  const handler = {} as typeof import("../../src/app/api/test-webhook/route.js")
+  handler satisfies RouteHandlerConfig<"/api/test-webhook">
 }
 
 // Validate ../../src/app/api/webhooks/gmail/route.ts

@@ -3,6 +3,7 @@ import arcjet, { detectBot, shield, slidingWindow } from "@arcjet/next"
 import { env } from "./data/env/server"
 
 const isPublicRoute = createRouteMatcher(['/sign-in(.*)', "/"])
+const isWebhookRoute = createRouteMatcher(['/api/webhooks(.*)', '/api/gmail-webhook'])
 
 const aj = arcjet({
     key: env.ARCJET_KEY,
@@ -21,14 +22,19 @@ const aj = arcjet({
 })
 
 export default clerkMiddleware(async (auth, req) => {
-    const decision = await aj.protect(req)
+    // Skip Arcjet protection for webhook routes
+    if (!isWebhookRoute(req)) {
+        const decision = await aj.protect(req)
 
-    if (decision.isDenied()) {
-        return new Response(null, { status: 403 })
+        if (decision.isDenied()) {
+            return new Response(null, { status: 403 })
+        }
     }
-  if (!isPublicRoute(req)) {
-    await auth.protect()
-  }
+    
+    // Skip Clerk authentication for webhook routes and public routes
+    if (!isPublicRoute(req) && !isWebhookRoute(req)) {
+        await auth.protect()
+    }
 })
 
 export const config = {
