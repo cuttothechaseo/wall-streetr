@@ -1,5 +1,6 @@
 "use client";
 
+import { Suspense } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useDashboard } from "@/components/dashboard/DashboardContext";
 import { Dashboard } from "@/components/dashboard/Dashboard";
@@ -13,7 +14,9 @@ export default function DashboardPage() {
     <div>
       <Header />
       <DashboardLayout>
-        <DashboardContent />
+        <Suspense fallback={<div>Loading...</div>}>
+          <DashboardContent />
+        </Suspense>
       </DashboardLayout>
     </div>
   );
