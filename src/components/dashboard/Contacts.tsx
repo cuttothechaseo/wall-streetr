@@ -174,7 +174,7 @@ export function Contacts() {
                 <TableCell>{contact.firm}</TableCell>
                 <TableCell className="text-sm">{contact.role}</TableCell>
                 <TableCell className="text-sm">
-                  {contact.school} '{contact.classYear}
+                  {contact.school} &apos;{contact.classYear}
                 </TableCell>
                 <TableCell>
                   <span

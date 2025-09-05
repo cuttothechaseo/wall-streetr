@@ -8,7 +8,6 @@ import {
   Settings,
   Users,
   Target,
-  TrendingUp,
 } from "lucide-react";
 
 import {
