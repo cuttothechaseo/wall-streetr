@@ -1,5 +1,4 @@
 import { GmailConnection } from "@/components/gmail/GmailConnection";
-import { WebhookStatusCheck } from "@/components/gmail/WebhookStatusCheck";
 
 export function Dashboard() {
   return (
@@ -31,14 +30,6 @@ export function Dashboard() {
           <p>
             ✅ Contact stages update automatically when emails are sent/received
           </p>
-        </div>
-      </div>
-
-      {/* Webhook Status Check (Debug) */}
-      <div className="rounded-lg border p-4">
-        <h3 className="text-lg font-semibold mb-4">Webhook Status Check</h3>
-        <div className="flex justify-center">
-          <WebhookStatusCheck />
         </div>
       </div>
 

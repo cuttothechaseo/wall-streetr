@@ -3,7 +3,7 @@ import arcjet, { detectBot, shield, slidingWindow } from "@arcjet/next"
 import { env } from "./data/env/server"
 
 const isPublicRoute = createRouteMatcher(['/sign-in(.*)', "/"])
-const isWebhookRoute = createRouteMatcher(['/api/webhooks(.*)', '/api/gmail-webhook'])
+const isWebhookRoute = createRouteMatcher(['/api/webhooks(.*)'])
 
 const aj = arcjet({
     key: env.ARCJET_KEY,
