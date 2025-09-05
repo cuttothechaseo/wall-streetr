@@ -1,2 +1,4 @@
 node_modules
+
+# Hide context file from public repo
 context.md
