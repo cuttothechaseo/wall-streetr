@@ -400,6 +400,7 @@ export function EmailCompositionModal({
 
 // Placeholder function for AI email generation
 async function generateEmailWithAI(contact: Contact, user: any) {
+  // eslint-disable-line @typescript-eslint/no-explicit-any
   // TODO: Replace this with actual LLM API call
   // This is a placeholder that simulates AI generation
 

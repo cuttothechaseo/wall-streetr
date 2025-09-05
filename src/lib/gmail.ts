@@ -78,7 +78,7 @@ export const createGmailClient = (accessToken: string, refreshToken: string) => 
 
 // Send email via Gmail API with attachments
 export const sendEmail = async (
-  gmailClient: any,
+  gmailClient: any, // eslint-disable-line @typescript-eslint/no-explicit-any
   to: string,
   subject: string,
   body: string,
@@ -140,9 +140,9 @@ export const sendEmail = async (
 
 // Set up Gmail push notifications (watch request)
 export const setupGmailWatch = async (
-  gmailClient: any,
+  gmailClient: any, // eslint-disable-line @typescript-eslint/no-explicit-any
   topicName: string,
-  webhookUrl: string
+  _webhookUrl: string // eslint-disable-line @typescript-eslint/no-unused-vars
 ) => {
   try {
     const response = await gmailClient.users.watch({
@@ -163,7 +163,7 @@ export const setupGmailWatch = async (
 
 // Get recent messages from Gmail
 export const getRecentMessages = async (
-  gmailClient: any,
+  gmailClient: any, // eslint-disable-line @typescript-eslint/no-explicit-any
   maxResults: number = 10,
   query: string = 'is:unread'
 ) => {
@@ -183,7 +183,7 @@ export const getRecentMessages = async (
 
 // Get full message details
 export const getMessageDetails = async (
-  gmailClient: any,
+  gmailClient: any, // eslint-disable-line @typescript-eslint/no-explicit-any
   messageId: string
 ) => {
   try {

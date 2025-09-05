@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { generateAuthUrl, exchangeCodeForTokens } from '@/lib/gmail';
-import { createClient } from '@/utils/supabase/server';
+import { generateAuthUrl } from '@/lib/gmail';
 
 // Initiate Gmail OAuth flow
 export async function GET(request: NextRequest) {

@@ -41,7 +41,22 @@ export function WebhookStatusCheck() {
   const [error, setError] = useState<string | null>(null);
   const [setupMessage, setSetupMessage] = useState<string | null>(null);
   const [testEmail, setTestEmail] = useState<string>("");
-  const [configDetails, setConfigDetails] = useState<any>(null);
+  const [configDetails, setConfigDetails] = useState<{
+    current: {
+      fullTopicName: string;
+      webhookUrl: string;
+      projectId: string;
+    };
+    requiredSetup: {
+      steps: Array<{
+        step: number;
+        title: string;
+        description: string;
+        details: string[];
+        url?: string;
+      }>;
+    };
+  } | null>(null);
 
   const checkWebhookStatus = async () => {
     if (!user) {
@@ -401,7 +416,7 @@ export function WebhookStatusCheck() {
             <div className="mt-4">
               <h5 className="font-medium mb-2">Required Setup Steps:</h5>
               <div className="space-y-2">
-                {configDetails.requiredSetup.steps.map((step: any) => (
+                {configDetails.requiredSetup.steps.map((step) => (
                   <div key={step.step} className="border rounded p-2">
                     <div className="font-medium">
                       Step {step.step}: {step.title}
