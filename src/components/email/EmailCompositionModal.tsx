@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useUser } from "@clerk/nextjs";
+import type { UserResource } from "@clerk/types";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -399,7 +400,10 @@ export function EmailCompositionModal({
 }
 
 // Placeholder function for AI email generation
-async function generateEmailWithAI(contact: Contact, user: unknown) {
+async function generateEmailWithAI(
+  contact: Contact,
+  user: UserResource | null | undefined
+) {
   // TODO: Replace this with actual LLM API call
   // This is a placeholder that simulates AI generation
 
