@@ -1,6 +1,6 @@
 "use client";
 
-import { MoreHorizontal, Plus } from "lucide-react";
+import { MoreHorizontal, Plus, Bell, X, CheckCircle } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useUser } from "@clerk/nextjs";
 
@@ -65,6 +65,16 @@ type Contact = {
   notes?: string;
   created_at: string;
   updated_at: string;
+};
+
+// Define notification type
+type Notification = {
+  id: string;
+  contactId: string;
+  contactName: string;
+  message: string;
+  timestamp: string;
+  read: boolean;
 };
 
 const getStageColor = (stage: Contact["stage"]) => {
@@ -155,6 +165,11 @@ export function Contacts() {
   const [emailModalOpen, setEmailModalOpen] = useState(false);
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
 
+  // Notification state
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [previousContacts, setPreviousContacts] = useState<Contact[]>([]);
+
   // Form state
   const [formData, setFormData] = useState({
     first_name: "",
@@ -167,6 +182,45 @@ export function Contacts() {
     tags: [] as string[],
     notes: "",
   });
+
+  // Function to check for stage changes and create notifications
+  const checkForStageChanges = (newContacts: Contact[]) => {
+    if (previousContacts.length === 0) {
+      setPreviousContacts(newContacts);
+      return;
+    }
+
+    const newNotifications: Notification[] = [];
+
+    newContacts.forEach((newContact) => {
+      const previousContact = previousContacts.find(
+        (prev) => prev.id === newContact.id
+      );
+
+      if (
+        previousContact &&
+        previousContact.stage === "intro_sent" &&
+        newContact.stage === "in_conversation"
+      ) {
+        const notification: Notification = {
+          id: `notification-${newContact.id}-${Date.now()}`,
+          contactId: newContact.id,
+          contactName: `${newContact.first_name} ${newContact.last_name}`,
+          message: `${newContact.first_name} ${newContact.last_name} has responded to your email!`,
+          timestamp: new Date().toISOString(),
+          read: false,
+        };
+        newNotifications.push(notification);
+      }
+    });
+
+    if (newNotifications.length > 0) {
+      setNotifications((prev) => [...newNotifications, ...prev]);
+      setShowNotifications(true);
+    }
+
+    setPreviousContacts(newContacts);
+  };
 
   useEffect(() => {
     async function fetchContacts() {
@@ -189,7 +243,9 @@ export function Contacts() {
           console.error("Error fetching contacts:", error);
           setError("Error loading contacts. Please try again later.");
         } else {
-          setContacts(data || []);
+          const contactsData = data || [];
+          setContacts(contactsData);
+          checkForStageChanges(contactsData);
         }
       } catch (err) {
         console.error("Error fetching contacts:", err);
@@ -365,13 +421,34 @@ export function Contacts() {
       if (error) {
         console.error("Error refreshing contacts:", error);
       } else {
-        setContacts(data || []);
+        const contactsData = data || [];
+        setContacts(contactsData);
+        checkForStageChanges(contactsData);
       }
     } catch (err) {
       console.error("Error refreshing contacts:", err);
     }
 
     // You could add a toast notification here
+  };
+
+  // Notification handlers
+  const handleDismissNotification = (notificationId: string) => {
+    setNotifications((prev) => prev.filter((n) => n.id !== notificationId));
+    if (notifications.length === 1) {
+      setShowNotifications(false);
+    }
+  };
+
+  const handleDismissAllNotifications = () => {
+    setNotifications([]);
+    setShowNotifications(false);
+  };
+
+  const handleMarkAsRead = (notificationId: string) => {
+    setNotifications((prev) =>
+      prev.map((n) => (n.id === notificationId ? { ...n, read: true } : n))
+    );
   };
 
   // Reset form when modal closes
@@ -624,6 +701,86 @@ export function Contacts() {
           </DialogContent>
         </Dialog>
       </div>
+
+      {/* Notifications Banner */}
+      {showNotifications && notifications.length > 0 && (
+        <div className="bg-green-50 border border-green-200 rounded-lg p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <Bell className="h-5 w-5 text-green-600" />
+              <h3 className="text-sm font-medium text-green-800">
+                New Responses ({notifications.length})
+              </h3>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleDismissAllNotifications}
+                className="text-green-600 hover:text-green-700"
+              >
+                Dismiss All
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowNotifications(false)}
+                className="text-green-600 hover:text-green-700"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            {notifications.slice(0, 3).map((notification) => (
+              <div
+                key={notification.id}
+                className={`flex items-center justify-between p-3 rounded-md ${
+                  notification.read ? "bg-green-100" : "bg-white"
+                }`}
+              >
+                <div className="flex items-center space-x-3">
+                  <CheckCircle className="h-4 w-4 text-green-600 flex-shrink-0" />
+                  <div>
+                    <p className="text-sm font-medium text-green-800">
+                      {notification.message}
+                    </p>
+                    <p className="text-xs text-green-600">
+                      {formatRelativeTime(notification.timestamp)}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-1">
+                  {!notification.read && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleMarkAsRead(notification.id)}
+                      className="text-green-600 hover:text-green-700"
+                    >
+                      Mark as read
+                    </Button>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleDismissNotification(notification.id)}
+                    className="text-green-600 hover:text-green-700"
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+            {notifications.length > 3 && (
+              <p className="text-xs text-green-600 text-center">
+                +{notifications.length - 3} more notifications
+              </p>
+            )}
+          </div>
+        </div>
+      )}
 
       {contacts && contacts.length > 0 ? (
         <div className="rounded-md border">

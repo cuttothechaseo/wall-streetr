@@ -20,16 +20,6 @@
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/api/gmail/check-connection/route.js"
-    ],
-    "/api/email/send/route": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/api/email/send/route.js"
-    ],
-    "/api/webhooks/gmail/route": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/api/webhooks/gmail/route.js"
     ]
   }
 }
